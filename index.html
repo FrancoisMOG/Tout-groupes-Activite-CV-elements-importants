@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>CV – Glisser-déposer</title>
+
+<style>
+/* --- STYLES ORIGINAUX --- */
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #f4f4f8;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+}
+
+/* Colonne des éléments */
+#elements {
+  width: 28%;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  height: 90vh;
+  overflow-y: auto;
+}
+
+#elements h2 {
+  font-size: 18px;
+  margin-top: 0;
+}
+
+.draggable {
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background: #e8ecf7;
+  border-radius: 6px;
+  cursor: grab;
+  border: 1px solid #cdd5ea;
+  font-size: 12px;
+}
+
+/* CV */
+#cv {
+  width: 70%;
+}
+
+.cv-full {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  min-height: 297mm; 
+}
+
+/* En-tête */
+.cv-header {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
+.cv-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  text-align: center;
+  border: 2px dashed #ccc;
+}
+
+.cv-info {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 20px;
+}
+
+.cv-info .zone {
+  min-height: 30px;
+  padding: 8px;
+  font-size: 13px;
+  border: 2px dashed #ccc;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Zones */
+.zone {
+  border: 2px dashed #b8b8b8;
+  padding: 10px;
+  min-height: 35px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  transition: 0.2s;
+  font-size: 13px;
+  background: #fff;
+}
+
+/* État survol lors du glisser */
+.zone.highlight {
+  border-color: #4a7dfc;
+  background: #eef3ff;
+}
+
+/* État rempli (visuel standard) */
+.zone.filled {
+  border-color: #4caf50;
+  background: #f2fff2;
+  border-style: solid; 
+  cursor: pointer; /* Indique qu'on peut cliquer pour retirer */
+}
+
+/* État erreur (après vérification) */
+.zone.error {
+  border-color: #f44336;
+  background: #ffebee;
+  border-style: solid;
+}
+
+/* État succès (après vérification) */
+.zone.success {
+  border-color: #4caf50;
+  background: #e8f5e9;
+  border-style: solid;
+}
+
+/* Compétences (Blocs visuels sans titres) */
+.competence-block {
+  border: 2px solid #d0d0d0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: #fafafa;
+}
+
+.competence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 20px;
+  margin-top: 10px;
+}
+
+.competence-grid .zone,
+.competence-block .zone {
+  min-height: 30px;
+  padding: 8px;
+  font-size: 12px;
+  border: 2px dashed #bbb;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* --- BOUTONS ET CONTROLES --- */
+.controls {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+#check { background: #4a7dfc; color: white; }
+#check:hover { background: #3b68d6; }
+
+#reset { background: #ff9800; color: white; }
+#reset:hover { background: #e68900; }
+
+#export { background: #4caf50; color: white; }
+#export:hover { background: #43a047; }
+
+#instructions-btn { background: #607d8b; color: white; }
+#instructions-btn:hover { background: #546e7a; }
+
+#result {
+  margin-top: 15px;
+  font-weight: bold;
+  width: 100%;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* Modale */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.close-modal {
+  position: absolute;
+  top: 10px; right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+}
+
+/* --- PRINT / PDF --- */
+@media print {
+  body { background: white; padding: 0; margin: 0; display: block; }
+  #elements, .controls, #result, .modal-overlay, .close-modal { display: none !important; }
+  #cv { width: 100%; margin: 0; }
+  .cv-full { box-shadow: none; padding: 0; width: 100%; margin: 0; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  
+  .zone {
+    border: 1px solid #ccc;
+    background: transparent !important;
+    min-height: 15px; /* Réduit un peu pour l'impression */
+  }
+
+  .zone.filled, .zone.success {
+    background: white !important;
+    border: 1px solid #000;
+  }
+  
+  .zone.error {
+    border: 1px solid #000; /* En impression, on garde neutre même si erreur */
+    background: white !important;
+  }
+
+  @page { size: A4; margin: 15mm; }
+}
+
+/* ===== PAGE D'INTRODUCTION ===== */
+#intro-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  box-sizing: border-box;
+}
+
+#intro-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 40px 48px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+#intro-card h1 {
+  font-size: 26px;
+  margin: 0 0 8px 0;
+  color: #1a1a2e;
+}
+
+#intro-card p {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 28px 0;
+  line-height: 1.5;
+}
+
+#intro-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+#intro-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+  display: block;
+}
+
+#intro-form input {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: "Segoe UI", sans-serif;
+  box-sizing: border-box;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#intro-form input:focus {
+  border-color: #4a7dfc;
+  box-shadow: 0 0 0 2px rgba(74, 125, 252, 0.15);
+}
+
+#startBtn {
+  margin-top: 10px;
+  padding: 12px 24px;
+  background: #4a7dfc;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#startBtn:hover {
+  background: #3a6de8;
+}
+
+#startBtn:disabled {
+  background: #a0b4e8;
+  cursor: not-allowed;
+}
+
+/* ===== ENTÊTE IMPRESSION (masqué à l'écran, visible en PDF) ===== */
+#print-user-header {
+  display: none;
+  padding: 16px 0 12px 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 16px;
+}
+
+#print-user-header .print-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 4px 0;
+}
+
+#print-user-header .print-formation {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 4px 0;
+}
+
+#print-user-header .print-date {
+  font-size: 11px;
+  color: #999;
+  margin: 0;
+}
+
+@media print {
+  #intro-page { display: none !important; }
+  #print-user-header { display: block !important; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ===== PAGE D'INTRODUCTION ===== -->
+<div id="intro-page">
+  <div id="intro-card">
+    <h1>Activit&eacute; Compose ton CV</h1>
+    <p>Avant de commencer, veuillez renseigner les informations suivantes. Elles figureront sur le document export&eacute;.</p>
+    <div id="intro-form">
+      <div>
+        <label for="inputNom">Nom</label>
+        <input type="text" id="inputNom" placeholder="Votre nom" required>
+      </div>
+      <div>
+        <label for="inputPrenom">Pr&eacute;nom</label>
+        <input type="text" id="inputPrenom" placeholder="Votre pr&eacute;nom" required>
+      </div>
+      <div>
+        <label for="inputFormation">Formation</label>
+        <input type="text" id="inputFormation" placeholder="Votre formation" required>
+      </div>
+      <button id="startBtn">Commencer l'activit&eacute;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Éléments à glisser -->
+<div id="elements">
+<h2>Éléments du CV</h2>
+<div id="draggables-container">
+  <!-- Identité -->
+  <div class="draggable" draggable="true" data-target="photo">Photo</div>
+  <div class="draggable" draggable="true" data-target="nom">Nom / Prénom</div>
+  <div class="draggable" draggable="true" data-target="titre">Titre du CV</div>
+  <div class="draggable" draggable="true" data-target="adresse">Adresse</div>
+  <div class="draggable" draggable="true" data-target="cpville">Code postal + Ville</div>
+  <div class="draggable" draggable="true" data-target="telephone">Téléphone</div>
+  <div class="draggable" draggable="true" data-target="email">Adresse Email</div>
+  <div class="draggable" draggable="true" data-target="permis">Permis + véhicule</div>
+  <div class="draggable" draggable="true" data-target="age">Âge / Date de naissance</div>
+  <div class="draggable" draggable="true" data-target="situation">Situation familiale</div>
+  <div class="draggable" draggable="true" data-target="nationalite">Nationalité</div>
+
+  <!-- Compétences -->
+  <div class="draggable" draggable="true" data-target="techniques">Techniques</div>
+  <div class="draggable" draggable="true" data-target="informatiques">Informatiques</div>
+  <div class="draggable" draggable="true" data-target="commerciales">Commerciales</div>
+  <div class="draggable" draggable="true" data-target="administratives">Administratives</div>
+  <div class="draggable" draggable="true" data-target="savoirEtre">Savoirs-être</div>
+
+  <!-- Expériences -->
+  <div class="draggable" draggable="true" data-target="experiences">Bloc d'expérience</div>
+  <div class="draggable" draggable="true" data-target="datesExp">Dates</div>
+  <div class="draggable" draggable="true" data-target="poste">Intitulé du poste</div>
+  <div class="draggable" draggable="true" data-target="entreprise">Entreprise</div>
+  <div class="draggable" draggable="true" data-target="villeExp">Ville</div>
+  <div class="draggable" draggable="true" data-target="taches">Tâches / missions</div>
+
+  <!-- Formations -->
+  <div class="draggable" draggable="true" data-target="formations">Bloc formation</div>
+  <div class="draggable" draggable="true" data-target="annee">Année d'obtention</div>
+  <div class="draggable" draggable="true" data-target="diplome">Diplôme obtenu</div>
+  <div class="draggable" draggable="true" data-target="etablissement">Établissement</div>
+  <div class="draggable" draggable="true" data-target="villeFormation">Ville</div>
+
+  <!-- Centres d'intérêt -->
+  <div class="draggable" draggable="true" data-target="centres">Bloc général</div>
+  <div class="draggable" draggable="true" data-target="langues">Langues étrangères</div>
+  <div class="draggable" draggable="true" data-target="hobbies">Passions / hobbies</div>
+  <div class="draggable" draggable="true" data-target="associatif">Activité associative</div>
+  <div class="draggable" draggable="true" data-target="autres">Autres</div>
+</div>
+</div>
+
+<!-- CV complet -->
+<div id="cv">
+<div class="cv-full">
+
+  <!-- Entête utilisateur (visible uniquement à l'impression / PDF) -->
+  <div id="print-user-header">
+    <div class="print-name"></div>
+    <div class="print-formation"></div>
+    <div class="print-date"></div>
+  </div>
+
+  <!-- Identité -->
+  <div class="cv-header">
+    <div class="cv-photo zone" data-accept="photo"></div>
+
+    <div class="cv-info">
+      <div class="zone" data-accept="nom"></div>
+      <div class="zone" data-accept="titre"></div>
+      <div class="zone" data-accept="adresse"></div>
+      <div class="zone" data-accept="cpville"></div>
+      <div class="zone" data-accept="telephone"></div>
+      <div class="zone" data-accept="email"></div>
+      <div class="zone" data-accept="permis"></div>
+      <div class="zone" data-accept="age"></div>
+      <div class="zone" data-accept="situation"></div>
+      <div class="zone" data-accept="nationalite"></div>
+    </div>
+  </div>
+
+  <!-- COMPÉTENCES (Sans titres h3/h4) -->
+  <div class="competence-block">
+    <div class="competence-grid">
+      <div class="zone" data-accept="techniques"></div>
+      <div class="zone" data-accept="informatiques"></div>
+      <div class="zone" data-accept="commerciales"></div>
+      <div class="zone" data-accept="administratives"></div>
+    </div>
+  </div>
+
+  <div class="competence-block">
+    <div class="zone" data-accept="savoirEtre"></div>
+  </div>
+
+  <!-- EXPÉRIENCES (Sans titre h3) -->
+  <div class="zone" data-accept="experiences"></div>
+  <div class="zone" data-accept="datesExp"></div>
+  <div class="zone" data-accept="poste"></div>
+  <div class="zone" data-accept="entreprise"></div>
+  <div class="zone" data-accept="villeExp"></div>
+  <div class="zone" data-accept="taches"></div>
+
+  <!-- FORMATIONS (Sans titre h3) -->
+  <div class="zone" data-accept="formations"></div>
+  <div class="zone" data-accept="annee"></div>
+  <div class="zone" data-accept="diplome"></div>
+  <div class="zone" data-accept="etablissement"></div>
+  <div class="zone" data-accept="villeFormation"></div>
+
+  <!-- CENTRES D'INTÉRÊTS (Sans titre h3) -->
+  <div class="zone" data-accept="centres"></div>
+  <div class="zone" data-accept="langues"></div>
+  <div class="zone" data-accept="hobbies"></div>
+  <div class="zone" data-accept="associatif"></div>
+  <div class="zone" data-accept="autres"></div>
+
+  <!-- Contrôles -->
+  <div class="controls">
+    <button id="check" class="btn">Vérifier</button>
+    <button id="reset" class="btn">Réinitialiser</button>
+    <button id="instructions-btn" class="btn">Consigne</button>
+    <button id="export" class="btn">Exporter PDF</button>
+  </div>
+  
+  <div id="result"></div>
+
+</div>
+</div>
+
+<!-- Modale -->
+<div id="modal" class="modal-overlay">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <h3>Consigne de l'exercice</h3>
+    <p>Bienvenue ! Votre objectif est de compléter ce CV correctement.</p>
+    <ol>
+      <li>Les éléments dans la colonne de gauche sont mélangés.</li>
+      <li><strong>Glissez</strong> chaque élément vers la <strong>zone de votre choix</strong> dans le CV.</li>
+      <li>Pas d'alerte immédiate : placez les éléments librement.</li>
+      <li>Si vous changez d'avant de vérifier, <strong>cliquez sur une zone remplie</strong> pour renvoyer l'élément dans la liste.</li>
+      <li>Cliquez sur <strong>"Vérifier"</strong> pour voir les erreurs et valider.</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+/* ===== DONNÉES UTILISATEUR (page d'introduction) ===== */
+var userData = { nom: '', prenom: '', formation: '' };
+
+/* --- Validation et démarrage depuis la page d'introduction --- */
+document.getElementById('startBtn').addEventListener('click', function () {
+  var nomVal = document.getElementById('inputNom').value.trim();
+  var prenomVal = document.getElementById('inputPrenom').value.trim();
+  var formationVal = document.getElementById('inputFormation').value.trim();
+
+  if (!nomVal || !prenomVal || !formationVal) {
+    alert('Veuillez remplir tous les champs avant de continuer.');
+    return;
+  }
+
+  userData.nom = nomVal;
+  userData.prenom = prenomVal;
+  userData.formation = formationVal;
+
+  document.getElementById('intro-page').style.display = 'none';
+});
+
+/* Fonction d'échappement HTML pour prévenir les injections XSS */
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+// --- GESTION DRAG & DROP ---
+const container = document.getElementById('draggables-container');
+let dragged = null;
+
+// Mélanger les éléments
+function shuffleElements() {
+  for (let i = container.children.length; i >= 0; i--) {
+    container.appendChild(container.children[Math.random() * i | 0]);
+  }
+}
+
+// Initialiser les éléments glissables
+function initDraggables() {
+  const draggables = document.querySelectorAll('.draggable');
+  draggables.forEach(el => {
+    el.addEventListener('dragstart', (e) => {
+      dragged = el;
+      e.dataTransfer.setData('text/plain', ''); // Nécessaire pour Firefox
+    });
+  });
+}
+
+// Initialiser les zones de dépôt
+function initZones() {
+  const zones = document.querySelectorAll('.zone');
+  
+  zones.forEach(zone => {
+    // Drag Over
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!zone.classList.contains('filled')) {
+        zone.classList.add('highlight');
+      }
+    });
+
+    // Drag Leave
+    zone.addEventListener('dragleave', () => {
+      zone.classList.remove('highlight');
+    });
+
+    // Drop (Autorisé partout)
+    zone.addEventListener('drop', () => {
+      zone.classList.remove('highlight');
+      
+      // Si la zone est déjà remplie, on ne fait rien (ou on pourrait remplacer, mais ici on bloque pour la simplicité)
+      if (!zone.classList.contains('filled') && dragged) {
+        zone.textContent = dragged.textContent;
+        // On stocke l'ID de l'élément pour la vérification
+        zone.dataset.filledWith = dragged.dataset.target; 
+        zone.classList.add('filled');
+        // On retire l'élément de la liste source
+        dragged.remove();
+        dragged = null;
+      }
+    });
+
+    // Clic pour retirer (Retour en arrière)
+    zone.addEventListener('click', () => {
+      if (zone.classList.contains('filled')) {
+        // Créer un nouvel élément draggable
+        const newEl = document.createElement('div');
+        newEl.classList.add('draggable');
+        newEl.draggable = true;
+        newEl.textContent = zone.textContent;
+        newEl.dataset.target = zone.dataset.filledWith;
+        
+        // Ajouter les événements de drag
+        newEl.addEventListener('dragstart', (e) => {
+          dragged = newEl;
+          e.dataTransfer.setData('text/plain', '');
+        });
+
+        // Réinsérer dans le conteneur
+        container.appendChild(newEl);
+        
+        // Vider la zone
+        zone.textContent = '';
+        delete zone.dataset.filledWith;
+        zone.classList.remove('filled', 'error', 'success');
+      }
+    });
+  });
+}
+
+// --- VÉRIFICATION ---
+document.getElementById('check').addEventListener('click', () => {
+  const zones = document.querySelectorAll('.zone');
+  const resultDiv = document.getElementById('result');
+  const remaining = document.querySelectorAll('.draggable').length;
+  
+  let errors = 0;
+  let correct = 0;
+
+  zones.forEach(zone => {
+    // Nettoyer les classes de résultat précédents
+    zone.classList.remove('error', 'success');
+    
+    if (zone.classList.contains('filled')) {
+      const expected = zone.dataset.accept;
+      const actual = zone.dataset.filledWith;
+
+      if (expected === actual) {
+        zone.classList.add('success');
+        correct++;
+      } else {
+        zone.classList.add('error');
+        errors++;
+      }
+    }
+  });
+
+  // Message final
+  if (remaining === 0 && errors === 0) {
+    resultDiv.innerHTML = "<span style='color:green'>Bravo ! Le CV est parfaitement rempli.</span>";
+  } else if (errors > 0) {
+    resultDiv.innerHTML = `<span style='color:red'>Attention : ${errors} élément(s) mal placé(s) (zones rouges).</span><br>Cliquez sur une zone pour l'effacer et réessayer.`;
+  } else if (remaining > 0) {
+    resultDiv.innerHTML = `<span style='color:orange'>Il reste ${remaining} élément(s) à placer.</span>`;
+  }
+});
+
+// --- AUTRES BOUTONS ---
+document.getElementById('reset').addEventListener('click', () => {
+  if(confirm("Voulez-vous vraiment tout recommencer ?")) {
+    location.reload();
+  }
+});
+
+// --- EXPORT PDF (MODIFIÉ : alimente l'entête utilisateur avant impression) ---
+document.getElementById('export').addEventListener('click', () => {
+  const remaining = document.querySelectorAll('.draggable').length;
+  if(remaining > 0 && !confirm("Certains éléments ne sont pas placés. Imprimer quand même ?")) return;
+
+  /* Alimenter l'entête avec nom, prénom, formation et date */
+  var now = new Date();
+  var jour = String(now.getDate()).padStart(2, '0');
+  var mois = String(now.getMonth() + 1).padStart(2, '0');
+  var annee = now.getFullYear();
+  var dateStr = jour + '/' + mois + '/' + annee;
+
+  var header = document.getElementById('print-user-header');
+  header.querySelector('.print-name').textContent = userData.prenom + ' ' + userData.nom;
+  header.querySelector('.print-formation').textContent = userData.formation;
+  header.querySelector('.print-date').textContent = dateStr;
+
+  window.print();
+});
+
+// --- MODALE ---
+const modal = document.getElementById('modal');
+document.getElementById('instructions-btn').onclick = () => modal.style.display = 'flex';
+document.querySelector('.close-modal').onclick = () => modal.style.display = 'none';
+window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; };
+
+// --- START ---
+shuffleElements();
+initDraggables();
+initZones();
+
+</script>
+</body>
+</html>
